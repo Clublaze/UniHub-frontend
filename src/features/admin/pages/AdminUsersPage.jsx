@@ -19,12 +19,20 @@ import {
   DialogTitle,
 } from '../../../components/ui/dialog'
 import {
-  Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '../../../components/ui/select'
 import { formatDate, timeAgo } from '../../../utils/date.util'
 
-const USER_TYPES = ['', 'STUDENT', 'FACULTY', 'UNIVERSITY_ADMIN', 'ADMIN', 'SUPER_ADMIN']
+// Sentinel — Radix UI Select crashes on value=""
+const ALL_TYPES = '__ALL_USER_TYPES__'
+
+const USER_TYPES = [
+  'STUDENT', 'FACULTY', 'UNIVERSITY_ADMIN', 'ADMIN', 'SUPER_ADMIN',
+]
 
 function LoginHistoryDialog({ userId, onClose }) {
   const { data: logs = [], isLoading } = useLoginHistory(userId)
@@ -88,8 +96,13 @@ function BlockDialog({ user, onClose }) {
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <p className="text-sm text-muted-foreground">
-            Blocking <strong>{user.displayName || user.email}</strong> will
-            prevent them from logging in. This action is reversible.
+            Blocking{' '}
+            <strong>
+              {user.displayName ||
+                `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+                user.email}
+            </strong>{' '}
+            will prevent them from logging in. This is reversible.
           </p>
           <div className="space-y-1">
             <Label>Reason *</Label>
@@ -117,16 +130,27 @@ function BlockDialog({ user, onClose }) {
   )
 }
 
+// Derive the best display name from a user object
+function getUserDisplayName(user) {
+  if (user.displayName) return user.displayName
+  const full = `${user.firstName || ''} ${user.lastName || ''}`.trim()
+  if (full) return full
+  return user.email
+}
+
 export default function AdminUsersPage() {
-  const [search,       setSearch]       = useState('')
-  const [userType,     setUserType]     = useState('')
-  const [page,         setPage]         = useState(1)
-  const [historyUser,  setHistoryUser]  = useState(null)
-  const [blockTarget,  setBlockTarget]  = useState(null)
+  const [search,      setSearch]      = useState('')
+  const [userType,    setUserType]    = useState(ALL_TYPES)
+  const [page,        setPage]        = useState(1)
+  const [historyUser, setHistoryUser] = useState(null)
+  const [blockTarget, setBlockTarget] = useState(null)
+
+  // Convert sentinel to empty string for the API
+  const realUserType = userType === ALL_TYPES ? '' : userType
 
   const { data, isLoading } = useAdminUsers({
     search:   search || undefined,
-    userType: userType || undefined,
+    userType: realUserType || undefined,
     page,
   })
 
@@ -155,14 +179,21 @@ export default function AdminUsersPage() {
           onChange={e => { setSearch(e.target.value); setPage(1) }}
           className="max-w-xs"
         />
-        <Select value={userType} onValueChange={v => { setUserType(v); setPage(1) }}>
+
+        <Select
+          value={userType}
+          onValueChange={v => { setUserType(v); setPage(1) }}
+        >
           <SelectTrigger className="w-48">
             <SelectValue placeholder="All user types" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All user types</SelectItem>
-            {USER_TYPES.filter(Boolean).map(t => (
-              <SelectItem key={t} value={t}>{t.replace(/_/g, ' ')}</SelectItem>
+            {/* Sentinel — Radix crashes on value="" */}
+            <SelectItem value={ALL_TYPES}>All user types</SelectItem>
+            {USER_TYPES.map(t => (
+              <SelectItem key={t} value={t}>
+                {t.replace(/_/g, ' ')}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -192,16 +223,19 @@ export default function AdminUsersPage() {
               </thead>
               <tbody>
                 {users.map(user => (
-                  <tr key={user.id} className="border-t hover:bg-muted/20 transition-colors">
+                  <tr
+                    key={user.id}
+                    className="border-t hover:bg-muted/20 transition-colors"
+                  >
                     <td className="px-4 py-3 font-medium text-foreground">
-                      {user.displayName || `${user.firstName} ${user.lastName}`}
+                      {getUserDisplayName(user)}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs">
                       {user.email}
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant="secondary" className="text-xs">
-                        {user.userType}
+                        {user.userType?.replace(/_/g, ' ')}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
@@ -225,7 +259,7 @@ export default function AdminUsersPage() {
                         >
                           <History className="h-4 w-4" />
                         </Button>
-                        {user.status === 'ACTIVE' ? (
+                        {user.status === 'ACTIVE' || user.status === 'PENDING_VERIFICATION' ? (
                           <Button
                             size="sm"
                             variant="ghost"

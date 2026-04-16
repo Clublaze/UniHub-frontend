@@ -1,4 +1,3 @@
-// Full config editor — approval workflow steps + all rule toggles
 import { useState } from 'react'
 import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
 import { Button } from '../../../components/ui/button'
@@ -15,47 +14,53 @@ const CANONICAL_ROLES = [
   'SECRETARY', 'VICE_PRESIDENT', 'PRESIDENT',
   'FACULTY_ADVISOR', 'HOD', 'DEAN', 'CLUB_LEAD',
 ]
-const STEP_TYPES  = ['SEQUENTIAL', 'PARALLEL']
-const SCOPE_OVERRIDES = ['', 'CLUB', 'SOCIETY', 'SCHOOL']
+const STEP_TYPES = ['SEQUENTIAL', 'PARALLEL']
 
-const emptyStep = {
-  stepOrder:    1,
-  canonicalRole: 'SECRETARY',
-  stepType:     'SEQUENTIAL',
-  scopeOverride: '',
+// Valid scope overrides — Radix crashes on value=""
+// Use a sentinel for "no override" (Default)
+const NO_SCOPE_OVERRIDE = '__NONE__'
+const SCOPE_OVERRIDES   = ['CLUB', 'SOCIETY', 'SCHOOL']
+
+function getCurrentSession() {
+  const d = new Date()
+  const y = d.getFullYear()
+  return d.getMonth() >= 7
+    ? `${y}-${String(y + 1).slice(2)}`
+    : `${y - 1}-${String(y).slice(2)}`
 }
 
 function buildInitial(config) {
   if (!config) {
     return {
-      effectiveFrom:  new Date().toISOString().slice(0, 10),
-      workflow:       [{ ...emptyStep }],
-      minimumNoticeDays:        15,
-      requiresBudgetApproval:   true,
-      ecrDeadlineDays:          3,
-      blackoutDaysBeforeExam:   15,
-      requiresTrio:             true,
-      requiresSettlement:       true,
-      allowMemberOnlyEvents:    false,
+      effectiveFrom:           new Date().toISOString().slice(0, 10),
+      workflow:                [{ stepOrder: 1, canonicalRole: 'SECRETARY', stepType: 'SEQUENTIAL', scopeOverride: NO_SCOPE_OVERRIDE }],
+      minimumNoticeDays:       15,
+      requiresBudgetApproval:  true,
+      ecrDeadlineDays:         3,
+      blackoutDaysBeforeExam:  15,
+      requiresTrio:            true,
+      requiresSettlement:      true,
+      allowMemberOnlyEvents:   false,
     }
   }
   return {
-    effectiveFrom:  config.effectiveFrom?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-    workflow:       config.approvalWorkflow?.length
-                      ? config.approvalWorkflow.map(s => ({
-                          stepOrder:     s.stepOrder,
-                          canonicalRole: s.canonicalRole,
-                          stepType:      s.stepType || 'SEQUENTIAL',
-                          scopeOverride: s.scopeOverride || '',
-                        }))
-                      : [{ ...emptyStep }],
-    minimumNoticeDays:        config.rules?.minimumNoticeDays        ?? 15,
-    requiresBudgetApproval:   config.rules?.requiresBudgetApproval   ?? true,
-    ecrDeadlineDays:          config.rules?.ecrDeadlineDays          ?? 3,
-    blackoutDaysBeforeExam:   config.rules?.blackoutDaysBeforeExam   ?? 15,
-    requiresTrio:             config.rules?.requiresTrio             ?? true,
-    requiresSettlement:       config.rules?.requiresSettlement       ?? true,
-    allowMemberOnlyEvents:    config.rules?.allowMemberOnlyEvents    ?? false,
+    effectiveFrom:           config.effectiveFrom?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+    workflow:                config.approvalWorkflow?.length
+      ? config.approvalWorkflow.map(s => ({
+          stepOrder:     s.stepOrder,
+          canonicalRole: s.canonicalRole,
+          stepType:      s.stepType || 'SEQUENTIAL',
+          // Map empty/null scopeOverride to sentinel
+          scopeOverride: s.scopeOverride || NO_SCOPE_OVERRIDE,
+        }))
+      : [{ stepOrder: 1, canonicalRole: 'SECRETARY', stepType: 'SEQUENTIAL', scopeOverride: NO_SCOPE_OVERRIDE }],
+    minimumNoticeDays:       config.rules?.minimumNoticeDays        ?? 15,
+    requiresBudgetApproval:  config.rules?.requiresBudgetApproval   ?? true,
+    ecrDeadlineDays:         config.rules?.ecrDeadlineDays          ?? 3,
+    blackoutDaysBeforeExam:  config.rules?.blackoutDaysBeforeExam   ?? 15,
+    requiresTrio:            config.rules?.requiresTrio             ?? true,
+    requiresSettlement:      config.rules?.requiresSettlement       ?? true,
+    allowMemberOnlyEvents:   config.rules?.allowMemberOnlyEvents    ?? false,
   }
 }
 
@@ -70,13 +75,17 @@ export default function GovernanceConfigEditor({
   const setRule  = (field, val) => setForm(f => ({ ...f, [field]: val }))
   const setField = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
 
-  // Workflow step helpers
   const addStep = () =>
     setForm(f => ({
       ...f,
       workflow: [
         ...f.workflow,
-        { ...emptyStep, stepOrder: f.workflow.length + 1 },
+        {
+          stepOrder:     f.workflow.length + 1,
+          canonicalRole: 'SECRETARY',
+          stepType:      'SEQUENTIAL',
+          scopeOverride: NO_SCOPE_OVERRIDE,
+        },
       ],
     }))
 
@@ -111,10 +120,11 @@ export default function GovernanceConfigEditor({
       scopeId,
       effectiveFrom: form.effectiveFrom,
       approvalWorkflow: form.workflow.map(s => ({
-        stepOrder:    s.stepOrder,
+        stepOrder:     s.stepOrder,
         canonicalRole: s.canonicalRole,
-        stepType:     s.stepType,
-        scopeOverride: s.scopeOverride || undefined,
+        stepType:      s.stepType,
+        // Convert sentinel back to undefined (backend treats missing as "no override")
+        scopeOverride: s.scopeOverride === NO_SCOPE_OVERRIDE ? undefined : s.scopeOverride,
       })),
       rules: {
         minimumNoticeDays:      Number(form.minimumNoticeDays),
@@ -134,9 +144,14 @@ export default function GovernanceConfigEditor({
       {/* Effective from */}
       <div className="space-y-1 max-w-xs">
         <Label>Effective From *</Label>
-        <Input type="date" value={form.effectiveFrom} onChange={setField('effectiveFrom')} required />
+        <Input
+          type="date"
+          value={form.effectiveFrom}
+          onChange={setField('effectiveFrom')}
+          required
+        />
         <p className="text-xs text-muted-foreground">
-          This creates a new version. Previous events remain bound to the old version.
+          Creates a new version. Previous events stay bound to the old version.
         </p>
       </div>
 
@@ -153,39 +168,28 @@ export default function GovernanceConfigEditor({
 
         <div className="space-y-3">
           {form.workflow.map((step, i) => (
-            <div
-              key={i}
-              className="rounded-lg border bg-card p-4 space-y-3"
-            >
+            <div key={i} className="rounded-lg border bg-card p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-foreground">
                   Step {step.stepOrder}
                 </p>
                 <div className="flex items-center gap-1">
                   <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
+                    type="button" variant="ghost" size="icon" className="h-7 w-7"
                     onClick={() => moveStep(i, -1)}
                     disabled={i === 0}
                   >
                     <ChevronUp className="h-4 w-4" />
                   </Button>
                   <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
+                    type="button" variant="ghost" size="icon" className="h-7 w-7"
                     onClick={() => moveStep(i, 1)}
                     disabled={i === form.workflow.length - 1}
                   >
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                   <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
+                    type="button" variant="ghost" size="icon"
                     className="h-7 w-7 text-destructive hover:text-destructive"
                     onClick={() => removeStep(i)}
                     disabled={form.workflow.length === 1}
@@ -202,9 +206,7 @@ export default function GovernanceConfigEditor({
                     value={step.canonicalRole}
                     onValueChange={(v) => setStep(i, 'canonicalRole', v)}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {CANONICAL_ROLES.map(r => (
                         <SelectItem key={r} value={r}>
@@ -221,9 +223,7 @@ export default function GovernanceConfigEditor({
                     value={step.stepType}
                     onValueChange={(v) => setStep(i, 'stepType', v)}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {STEP_TYPES.map(t => (
                         <SelectItem key={t} value={t}>{t}</SelectItem>
@@ -238,12 +238,13 @@ export default function GovernanceConfigEditor({
                     value={step.scopeOverride}
                     onValueChange={(v) => setStep(i, 'scopeOverride', v)}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Default" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Default</SelectItem>
-                      {SCOPE_OVERRIDES.filter(Boolean).map(s => (
+                      {/* Sentinel — Radix crashes on value="" */}
+                      <SelectItem value={NO_SCOPE_OVERRIDE}>
+                        Default (auto-resolve)
+                      </SelectItem>
+                      {SCOPE_OVERRIDES.map(s => (
                         <SelectItem key={s} value={s}>{s}</SelectItem>
                       ))}
                     </SelectContent>
@@ -281,10 +282,14 @@ export default function GovernanceConfigEditor({
 
         <div className="space-y-4">
           {[
-            ['requiresBudgetApproval', 'Requires Budget Approval', 'Event cannot be fully approved until the budget is also approved.'],
-            ['requiresTrio',           'Requires Trio Documents',  'Proposal PDF + Run of Show + Poster must all be uploaded before submission.'],
-            ['requiresSettlement',     'Requires Post-Event Settlement', 'Financial settlement must be submitted and approved before event is closed.'],
-            ['allowMemberOnlyEvents',  'Allow Members-Only Events', 'Club can mark events as internal (not visible in public discovery).'],
+            ['requiresBudgetApproval', 'Requires Budget Approval',
+              'Event cannot be fully approved until budget is also approved.'],
+            ['requiresTrio',           'Requires Trio Documents',
+              'Proposal + Run of Show + Poster must all be uploaded before submission.'],
+            ['requiresSettlement',     'Requires Post-Event Settlement',
+              'Financial settlement must be submitted and approved before event closes.'],
+            ['allowMemberOnlyEvents',  'Allow Members-Only Events',
+              'Club can mark events as internal — not visible in public Explore.'],
           ].map(([field, label, desc]) => (
             <div key={field} className="flex items-start gap-3">
               <Switch

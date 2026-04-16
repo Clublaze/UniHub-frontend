@@ -5,49 +5,64 @@ import Loader from '../../../components/shared/Loader'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import {
-  Select, SelectContent, SelectItem,
-  SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '../../../components/ui/select'
 import { Badge } from '../../../components/ui/badge'
-import { timeAgo, formatDate } from '../../../utils/date.util'
+import { timeAgo } from '../../../utils/date.util'
 import useAuthStore from '../../../store/authStore'
 
+// Radix UI Select crashes on value="" — use a sentinel string instead
+const ALL_TYPES = '__ALL_TYPES__'
+
 const ENTITY_TYPES = [
-  '', 'EVENT', 'BUDGET', 'SETTLEMENT', 'ECR',
+  'EVENT', 'BUDGET', 'SETTLEMENT', 'ECR',
   'ROLE', 'MEMBERSHIP', 'GOVERNANCE_CONFIG', 'ORGANIZATION',
 ]
 
-// Human-readable action label mapping
 const ACTION_LABEL = {
-  EVENT_SUBMITTED:     'Event Submitted',
-  EVENT_APPROVED:      'Event Approved',
-  EVENT_REJECTED:      'Event Rejected',
-  EVENT_CREATED:       'Event Created',
-  STEP_APPROVED:       'Step Approved',
-  STEP_REJECTED:       'Step Rejected',
-  ROLE_ASSIGNED:       'Role Assigned',
-  ROLE_REMOVED:        'Role Removed',
-  BUDGET_SUBMITTED:    'Budget Submitted',
-  BUDGET_APPROVED:     'Budget Approved',
-  ECR_SUBMITTED:       'ECR Submitted',
-  ECR_APPROVED:        'ECR Approved',
-  MEMBERSHIP_APPROVED: 'Membership Approved',
-  MEMBERSHIP_REJECTED: 'Membership Rejected',
-  SETTLEMENT_SUBMITTED:'Settlement Submitted',
+  EVENT_SUBMITTED:      'Event Submitted',
+  EVENT_APPROVED:       'Event Approved',
+  EVENT_REJECTED:       'Event Rejected',
+  EVENT_CREATED:        'Event Created',
+  STEP_APPROVED:        'Step Approved',
+  STEP_REJECTED:        'Step Rejected',
+  ROLE_ASSIGNED:        'Role Assigned',
+  ROLE_REMOVED:         'Role Removed',
+  BUDGET_SUBMITTED:     'Budget Submitted',
+  BUDGET_APPROVED:      'Budget Approved',
+  ECR_SUBMITTED:        'ECR Submitted',
+  ECR_APPROVED:         'ECR Approved',
+  MEMBERSHIP_APPROVED:  'Membership Approved',
+  MEMBERSHIP_REJECTED:  'Membership Rejected',
+  SETTLEMENT_SUBMITTED: 'Settlement Submitted',
+}
+
+// Truncate a MongoDB ObjectId to something readable in a table
+function truncateId(id) {
+  if (!id || id.length < 8) return id
+  return `...${id.slice(-8)}`
 }
 
 export default function AuditPage() {
   const store   = useAuthStore()
   const isAdmin = store.isAdmin()
 
-  const [entityType, setEntityType] = useState('')
+  // entityType: '' means "all types" — sentinel maps to ''
+  const [entityType, setEntityType] = useState(ALL_TYPES)
   const [page,       setPage]       = useState(1)
   const [exportFrom, setExportFrom] = useState('')
   const [exportTo,   setExportTo]   = useState('')
   const [exporting,  setExporting]  = useState(false)
 
+  // Convert sentinel to real value for the API
+  const realEntityType = entityType === ALL_TYPES ? '' : entityType
+
   const { data, isLoading } = useAuditFeed({
-    ...(entityType ? { entityType } : {}),
+    ...(realEntityType ? { entityType: realEntityType } : {}),
     page,
   })
 
@@ -59,8 +74,6 @@ export default function AuditPage() {
     setExporting(true)
     try {
       await downloadAuditCsv(exportFrom, exportTo)
-    } catch {
-      // toast handled by the download fn
     } finally {
       setExporting(false)
     }
@@ -69,7 +82,6 @@ export default function AuditPage() {
   return (
     <div className="space-y-6">
 
-      {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Audit Panel</h1>
@@ -79,7 +91,6 @@ export default function AuditPage() {
           </p>
         </div>
 
-        {/* CSV export — admins only */}
         {isAdmin && (
           <div className="flex items-center gap-2 flex-wrap">
             <Input
@@ -118,8 +129,9 @@ export default function AuditPage() {
             <SelectValue placeholder="All entity types" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All entity types</SelectItem>
-            {ENTITY_TYPES.filter(Boolean).map(t => (
+            {/* Sentinel value — Radix crashes on value="" */}
+            <SelectItem value={ALL_TYPES}>All entity types</SelectItem>
+            {ENTITY_TYPES.map(t => (
               <SelectItem key={t} value={t}>
                 {t.replace(/_/g, ' ')}
               </SelectItem>
@@ -128,7 +140,6 @@ export default function AuditPage() {
         </Select>
       </div>
 
-      {/* Table */}
       {isLoading ? (
         <Loader text="Loading audit feed..." />
       ) : logs.length === 0 ? (
@@ -153,24 +164,30 @@ export default function AuditPage() {
               </thead>
               <tbody>
                 {logs.map((log, i) => (
-                  <tr key={log._id || i} className="border-t hover:bg-muted/20 transition-colors">
+                  <tr
+                    key={log._id || i}
+                    className="border-t hover:bg-muted/20 transition-colors"
+                  >
                     <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                       {log.timestamp ? timeAgo(log.timestamp) : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-foreground font-medium text-xs">
-                        {ACTION_LABEL[log.action] || log.action}
+                        {ACTION_LABEL[log.action] || log.action?.replace(/_/g, ' ')}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       {log.entityType && (
                         <Badge variant="secondary" className="text-xs">
-                          {log.entityType}
+                          {log.entityType.replace(/_/g, ' ')}
                         </Badge>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
-                      {log.performedBy}
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      {/* Show truncated ID — full ID is too long for a table column */}
+                      <span className="font-mono" title={log.performedBy}>
+                        {truncateId(log.performedBy)}
+                      </span>
                     </td>
                   </tr>
                 ))}

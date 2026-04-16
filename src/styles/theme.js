@@ -1,6 +1,6 @@
-// ─── Single source of truth for all status colors ────────────────────────────
-// Rule: never write color class names directly in components.
-// Import the right map here and do: const cls = map[status]
+// ─── Single source of truth for all colors ───────────────────────────────────
+// Rule: never write color class names in components.
+// Import the right map here and use: const cls = map[key]
 
 export const colors = {
   primary:     'hsl(var(--primary))',
@@ -59,7 +59,6 @@ export const ecrStatusClass = {
 }
 
 // ─── Calendar event pills ─────────────────────────────────────────────────────
-// Used in MonthView and WeekView event pills
 export const calendarPillClass = {
   APPROVED:         'bg-green-100 text-green-800 border border-green-200',
   DRAFT:            'bg-gray-100 text-gray-600 border border-gray-200',
@@ -67,7 +66,6 @@ export const calendarPillClass = {
   REJECTED:         'bg-red-100 text-red-700 border border-red-200',
   ECR_PENDING:      'bg-orange-100 text-orange-800 border border-orange-200',
   CLOSED:           'bg-gray-100 text-gray-400 border border-gray-100',
-  // Special: approver has an active step for this event
   APPROVER_PENDING: 'bg-amber-200 text-amber-900 border border-amber-300',
 }
 
@@ -96,6 +94,22 @@ export const bannerClass = {
   info:    'border border-blue-200 bg-blue-50 text-blue-800',
 }
 
+// ─── Approve / Reject action buttons ─────────────────────────────────────────
+// Used in MembersTab, CoLeadPanel, ClubLeadPanel — anywhere approve/reject
+// buttons appear. Import and use: className={actionButtonClass.approve}
+export const actionButtonClass = {
+  approve: 'text-green-700 border-green-200 hover:bg-green-50',
+  reject:  'text-destructive border-destructive/20 hover:bg-destructive/5',
+}
+
+// ─── Status indicator dot (used in ApproverWidget, ApprovalsPage) ────────────
+export const indicatorDotClass = {
+  active:   'bg-amber-400 animate-pulse',
+  inactive: 'bg-gray-300',
+  success:  'bg-green-500',
+  error:    'bg-red-500',
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 export function getStepStyleKey(step) {
   if (step.status === 'APPROVED') return 'APPROVED'
@@ -105,8 +119,6 @@ export function getStepStyleKey(step) {
   return 'PENDING_INACTIVE'
 }
 
-// Returns the right calendar pill class for an event
-// isApproverPending = true means this user has an active step on this event
 export function getCalendarPillClass(event) {
   if (event.isApproverPending) return calendarPillClass.APPROVER_PENDING
   return calendarPillClass[event.status] ?? calendarPillClass.APPROVED

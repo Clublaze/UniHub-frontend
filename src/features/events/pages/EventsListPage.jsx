@@ -21,6 +21,9 @@ const STATUSES = [
   'REJECTED', 'ECR_PENDING', 'CLOSED',
 ]
 
+// Sentinel value used instead of empty string — Radix UI Select crashes on value=""
+const ALL_CLUBS = '__ALL_CLUBS__'
+
 export default function EventsListPage() {
   const store     = useAuthStore()
   const leadClubs = store.getLeadClubs()
@@ -28,14 +31,17 @@ export default function EventsListPage() {
 
   const [status, setStatus] = useState('ALL')
   const [clubId, setClubId] = useState(
-    leadClubs.length === 1 ? leadClubs[0].scopeId : ''
+    leadClubs.length === 1 ? leadClubs[0].scopeId : ALL_CLUBS
   )
   const [search, setSearch] = useState('')
   const [page,   setPage]   = useState(1)
 
+  // Convert sentinel back to empty string for the API call
+  const realClubId = clubId === ALL_CLUBS ? '' : clubId
+
   const queryParams = {
-    ...(status !== 'ALL' ? { status } : {}),
-    ...(clubId            ? { clubId } : {}),
+    ...(status !== 'ALL' ? { status }         : {}),
+    ...(realClubId       ? { clubId: realClubId } : {}),
     page,
     limit: 20,
   }
@@ -45,7 +51,6 @@ export default function EventsListPage() {
   const total      = data?.total ?? 0
   const totalPages = Math.ceil(total / 20) || 1
 
-  // Client-side title search on already-fetched page
   const filtered = events.filter(e =>
     !search || e.title.toLowerCase().includes(search.toLowerCase())
   )
@@ -55,7 +60,6 @@ export default function EventsListPage() {
   return (
     <div className="space-y-6">
 
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Events</h1>
@@ -97,7 +101,7 @@ export default function EventsListPage() {
           </SelectContent>
         </Select>
 
-        {/* Only show club picker when user manages multiple clubs or is admin */}
+        {/* Only show when user manages multiple clubs or is admin */}
         {(leadClubs.length > 1 || isAdmin) && (
           <Select
             value={clubId}
@@ -107,7 +111,8 @@ export default function EventsListPage() {
               <SelectValue placeholder="All clubs" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All clubs</SelectItem>
+              {/* Use sentinel value — Radix crashes on value="" */}
+              <SelectItem value={ALL_CLUBS}>All clubs</SelectItem>
               {leadClubs.map(c => (
                 <SelectItem key={c.scopeId} value={c.scopeId}>
                   {c.scopeName}
@@ -118,7 +123,6 @@ export default function EventsListPage() {
         )}
       </div>
 
-      {/* Content */}
       {isLoading ? (
         <Loader text="Loading events..." />
       ) : filtered.length === 0 ? (
@@ -180,12 +184,10 @@ export default function EventsListPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-3">
               <Button
-                variant="outline"
-                size="sm"
+                variant="outline" size="sm"
                 disabled={page === 1}
                 onClick={() => setPage(p => p - 1)}
               >
@@ -195,8 +197,7 @@ export default function EventsListPage() {
                 Page {page} of {totalPages}
               </span>
               <Button
-                variant="outline"
-                size="sm"
+                variant="outline" size="sm"
                 disabled={page >= totalPages}
                 onClick={() => setPage(p => p + 1)}
               >

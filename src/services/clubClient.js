@@ -28,9 +28,14 @@ clubClient.interceptors.response.use(
         useAuthStore.setState({ accessToken })
         error.config.headers.Authorization = `Bearer ${accessToken}`
         return clubClient(error.config)
-      } catch {
+      } catch (refreshError) {
         useAuthStore.getState().logout()
-        window.location.href = '/auth/login'
+
+        if (window.location.pathname !== '/auth/login') {
+          window.location.href = '/auth/login'
+        }
+
+        return Promise.reject(refreshError)
       }
     }
     return Promise.reject(error)
