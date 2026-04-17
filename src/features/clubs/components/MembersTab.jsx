@@ -9,6 +9,7 @@ import Loader from '../../../components/shared/Loader'
 import { Button } from '../../../components/ui/button'
 import { Textarea } from '../../../components/ui/textarea'
 import { Label } from '../../../components/ui/label'
+import { actionButtonClass } from '../../../styles/theme'
 import { formatDate } from '../../../utils/date.util'
 
 // Reject dialog shown inline below the row being rejected
@@ -89,7 +90,7 @@ export default function MembersTab({ clubId }) {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-green-700 border-green-200 hover:bg-green-50"
+                      className={actionButtonClass.approve}
                       onClick={() => approve(m._id)}
                       disabled={approving}
                     >
@@ -98,7 +99,7 @@ export default function MembersTab({ clubId }) {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-destructive border-destructive/20 hover:bg-destructive/5"
+                      className={actionButtonClass.reject}
                       onClick={() =>
                         setRejectingId(rejectingId === m._id ? null : m._id)
                       }

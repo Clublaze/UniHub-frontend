@@ -6,12 +6,19 @@ import {
   updateEventApi, submitEventApi, resubmitEventApi, completeEventApi,
 } from '../events.api'
 
+// retry: false is CRITICAL here.
+// Without it, when a 404 comes back (event doesn't exist or no access),
+// TanStack Query silently retries 3 times — then data is undefined
+// and the page shows "Event not found" with no explanation.
+// With retry:false the error state is set immediately on the first failure.
 export function useEventById(id) {
   return useQuery({
     queryKey: ['event', id],
     queryFn:  () => getEventByIdApi(id),
     select:   (res) => res.data.data,
     enabled:  !!id,
+    retry:    false,
+    staleTime: 1000 * 60 * 2,
   })
 }
 
@@ -21,9 +28,9 @@ export function useEventsList(params = {}) {
     queryFn:  () => getAllEventsApi(params),
     select:   (res) => {
       const d = res.data.data
-      // Backend returns either an array or a paginated { data, total } object
       return Array.isArray(d) ? { data: d, total: d.length } : d
     },
+    retry: false,
   })
 }
 
@@ -69,7 +76,6 @@ export function useSubmitEvent(id) {
       qc.invalidateQueries({ queryKey: ['event', id] })
       qc.invalidateQueries({ queryKey: ['events'] })
     },
-    // No onError here — EventDetailPage handles the error messages specially
   })
 }
 

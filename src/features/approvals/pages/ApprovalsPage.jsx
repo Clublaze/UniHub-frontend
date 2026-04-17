@@ -7,6 +7,7 @@ import { useApprovalsDashboard } from '../hooks/useApprovalsPage'
 import Loader from '../../../components/shared/Loader'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
+import { indicatorDotClass } from '../../../styles/theme'
 import { timeAgo } from '../../../utils/date.util'
 import useAuthStore from '../../../store/authStore'
 
@@ -133,7 +134,7 @@ export default function ApprovalsPage() {
                           </Badge>
                         )}
                         {/* Pulsing dot — uses inline style, not a status color class */}
-                        <div className="h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse" />
+                        <div className={`h-2.5 w-2.5 rounded-full ${indicatorDotClass.active}`} />
                         <span className="text-xs text-muted-foreground">Active</span>
                       </div>
                     </div>

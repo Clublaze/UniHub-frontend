@@ -10,6 +10,7 @@ import {
 } from '../../memberships/memberships.api'
 import Loader from '../../../components/shared/Loader'
 import { Button } from '../../../components/ui/button'
+import { actionButtonClass } from '../../../styles/theme'
 import { formatDate } from '../../../utils/date.util'
 
 export default function CoLeadPanel({ clubId, clubName }) {
@@ -89,7 +90,7 @@ export default function CoLeadPanel({ clubId, clubName }) {
                 <div className="flex gap-2">
                   <Button
                     size="sm" variant="outline"
-                    className="text-green-700 border-green-200 hover:bg-green-50"
+                    className={actionButtonClass.approve}
                     onClick={() => approveMutation.mutate(m._id)}
                     disabled={approveMutation.isPending}
                   >
@@ -97,7 +98,7 @@ export default function CoLeadPanel({ clubId, clubName }) {
                   </Button>
                   <Button
                     size="sm" variant="outline"
-                    className="text-destructive border-destructive/20 hover:bg-destructive/5"
+                    className={actionButtonClass.reject}
                     onClick={() => rejectMutation.mutate(m._id)}
                     disabled={rejectMutation.isPending}
                   >
