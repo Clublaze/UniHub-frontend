@@ -1,10 +1,15 @@
+// Place at: src/features/auth/pages/ForgotPasswordPage.jsx
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { forgotPasswordApi } from '../auth.api'
-import { Button } from '../../../components/ui/button'
-import { Input } from '../../../components/ui/input'
-import { Label } from '../../../components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card'
+import AuthLayout from '../components/AuthLayout'
+import * as S from '../components/authStyles'
+
+const BackIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+)
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -25,52 +30,70 @@ export default function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="pt-8 pb-8 space-y-3">
-            <div className="text-4xl">📧</div>
-            <h2 className="text-xl font-semibold">Check your inbox</h2>
-            <p className="text-muted-foreground text-sm">
-              If an account exists for {email}, you'll receive a reset link shortly.
-            </p>
-            <Link to="/auth/login" className="text-sm underline block mt-2">
-              Back to login
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthLayout>
+        <div style={{ ...S.card, textAlign: 'center' }}>
+          <div style={{
+            width: '64px', height: '64px', borderRadius: '50%', margin: '0 auto 20px',
+            background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.25)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px',
+          }}>
+            📧
+          </div>
+          <h2 style={S.heading}>Check your inbox</h2>
+          <p style={{ ...S.subheading, margin: '6px 0 28px' }}>
+            If an account exists for{' '}
+            <span style={{ color: '#38bdf8', fontWeight: '500' }}>{email}</span>,
+            you'll receive a reset link shortly.
+          </p>
+          <Link to="/auth/login" style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            color: 'rgba(255,255,255,0.5)', fontSize: '13px', textDecoration: 'none',
+          }}>
+            <BackIcon /> Back to login
+          </Link>
+        </div>
+      </AuthLayout>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl">Forgot password</CardTitle>
-          <CardDescription>Enter your email to receive a reset link</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Sending...' : 'Send Reset Link'}
-            </Button>
-          </form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            <Link to="/auth/login" className="underline hover:text-foreground">
-              Back to login
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthLayout>
+      <div style={S.card}>
+        <Link to="/auth/login" style={{
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          color: 'rgba(255,255,255,0.4)', fontSize: '12px', textDecoration: 'none',
+          marginBottom: '24px',
+        }}>
+          <BackIcon /> Back to login
+        </Link>
+
+        <h2 style={S.heading}>Forgot password</h2>
+        <p style={S.subheading}>Enter your email to receive a reset link</p>
+
+        <form onSubmit={handleSubmit}>
+          <div style={S.fieldGroup}>
+            <label style={S.label}>Email</label>
+            <input
+              type="email"
+              placeholder="you@university.edu"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              style={S.input}
+              onFocus={e => { e.target.style.borderColor = 'rgba(56,189,248,0.5)' }}
+              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)' }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ ...(loading ? S.btnDisabled : S.btn), marginTop: '4px' }}
+          >
+            {loading ? 'Sending...' : 'Send Reset Link'}
+          </button>
+        </form>
+      </div>
+    </AuthLayout>
   )
 }
