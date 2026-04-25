@@ -1,65 +1,98 @@
-// Shared — used in explore pages AND dashboard UpcomingEventsWidget
-// linkPrefix lets you control where clicking goes:
-//   explore context  → /explore/events/:id
-//   dashboard context → /events/:id  (Phase 5)
+// src/components/shared/EventCard.jsx
 import { Link } from 'react-router-dom'
-import { Calendar, MapPin, Users } from 'lucide-react'
-import { Card, CardContent } from '../ui/card'
-import StatusBadge from './StatusBadge'
+import { Calendar, MapPin } from 'lucide-react'
+import { dark, darkStatusBadge, getDarkBadge } from '../../styles/theme'
 import { formatDate } from '../../utils/date.util'
 
 export default function EventCard({ event, linkPrefix = '/explore/events' }) {
+  const badge = getDarkBadge(event.status)
+
   return (
-    <Link to={`${linkPrefix}/${event._id}`}>
-      <Card className="hover:shadow-md transition-shadow h-full cursor-pointer">
-        <CardContent className="p-4 space-y-3">
-          {/* Poster image or fallback */}
+    <Link to={`${linkPrefix}/${event._id}`} style={{ textDecoration: 'none', display: 'block' }}>
+      <div style={{
+        background: dark.card,
+        border: `1px solid ${dark.cardBorder}`,
+        borderRadius: '12px',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        transition: 'border-color 0.2s, transform 0.15s',
+        height: '100%',
+      }}
+        onMouseEnter={e => {
+          e.currentTarget.style.borderColor = dark.cardBorderHover
+          e.currentTarget.style.transform = 'translateY(-2px)'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.borderColor = dark.cardBorder
+          e.currentTarget.style.transform = 'translateY(0)'
+        }}
+      >
+        {/* Poster image */}
+        <div style={{ position: 'relative', width: '100%', height: '140px', overflow: 'hidden' }}>
           {event.attachments?.poster ? (
             <img
               src={event.attachments.poster}
               alt={event.title}
-              className="w-full h-36 object-cover rounded-md"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           ) : (
-            <div className="w-full h-36 rounded-md bg-muted flex items-center justify-center">
-              <Calendar className="h-8 w-8 text-muted-foreground" />
+            <div style={{
+              width: '100%', height: '100%',
+              background: 'linear-gradient(135deg, rgba(56,189,248,0.15) 0%, rgba(139,92,246,0.15) 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Calendar size={28} color='rgba(56,189,248,0.5)' />
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold text-sm text-foreground line-clamp-2 leading-snug">
-                {event.title}
-              </h3>
-              {event.status && <StatusBadge status={event.status} />}
-            </div>
+          {/* Status badge overlay */}
+          {event.status && (
+            <span style={{
+              position: 'absolute', top: '10px', left: '10px',
+              background: badge.bg,
+              color: badge.color,
+              border: `1px solid ${badge.border}`,
+              borderRadius: '6px',
+              fontSize: '10px', fontWeight: '600',
+              padding: '3px 8px',
+              textTransform: 'capitalize',
+            }}>
+              {event.status.replace(/_/g, ' ')}
+            </span>
+          )}
+        </div>
 
-            <p className="text-xs text-muted-foreground">
-              {event.organizingClubName || ''}
-            </p>
+        {/* Card content */}
+        <div style={{ padding: '14px' }}>
+          <h3 style={{
+            fontSize: '14px', fontWeight: '600', color: dark.accentBlue,
+            margin: '0 0 6px', lineHeight: 1.4,
+            overflow: 'hidden', display: '-webkit-box',
+            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+          }}>
+            {event.title}
+          </h3>
 
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {formatDate(event.startDate)}
-              </span>
-              {event.venue && (
-                <span className="flex items-center gap-1 truncate">
-                  <MapPin className="h-3 w-3" />
-                  {event.venue}
-                </span>
-              )}
-            </div>
+          <p style={{ fontSize: '12px', color: dark.textMuted, margin: '0 0 8px' }}>
+            {event.organizingClubName || ''}
+          </p>
 
-            {event.expectedParticipants && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Users className="h-3 w-3" />
-                {event.expectedParticipants} expected
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px',
+              fontSize: '11px', color: dark.textMuted }}>
+              <Calendar size={11} />
+              {formatDate(event.startDate)}
+            </span>
+            {event.venue && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px',
+                fontSize: '11px', color: dark.textMuted }}>
+                <MapPin size={11} />
+                {event.venue}
               </span>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </Link>
   )
 }
