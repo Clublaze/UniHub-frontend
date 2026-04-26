@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import useAuthStore from '../../../store/authStore'
-import { getApprovalsDashboardApi } from '../approvals.api'
+import { getApprovalsDashboardData } from '../approvals.api'
 
 // Returns the count of pending approval steps assigned to this user
 // Only fetches if the user is an approver — otherwise returns 0
@@ -10,12 +10,9 @@ export function usePendingCount() {
 
   const { data } = useQuery({
     queryKey: ['approvals', 'dashboard'],
-    queryFn: getApprovalsDashboardApi,
+    queryFn: getApprovalsDashboardData,
     enabled: isApprover, // don't run the query at all for non-approvers
-    select: (res) => {
-      const steps = res.data.data
-      return Array.isArray(steps) ? steps.length : 0
-    },
+    select: (steps) => steps.length,
     staleTime: 1000 * 60 * 2, // 2 minutes
   })
 
