@@ -14,6 +14,7 @@ import {
 import { Badge } from '../../../components/ui/badge'
 import { timeAgo } from '../../../utils/date.util'
 import useAuthStore from '../../../store/authStore'
+import { getUserDisplay } from '../../../utils/userDisplay.util'
 
 // Radix UI Select crashes on value="" — use a sentinel string instead
 const ALL_TYPES = '__ALL_TYPES__'
@@ -39,12 +40,6 @@ const ACTION_LABEL = {
   MEMBERSHIP_APPROVED:  'Membership Approved',
   MEMBERSHIP_REJECTED:  'Membership Rejected',
   SETTLEMENT_SUBMITTED: 'Settlement Submitted',
-}
-
-// Truncate a MongoDB ObjectId to something readable in a table
-function truncateId(id) {
-  if (!id || id.length < 8) return id
-  return `...${id.slice(-8)}`
 }
 
 export default function AuditPage() {
@@ -184,9 +179,8 @@ export default function AuditPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {/* Show truncated ID — full ID is too long for a table column */}
-                      <span className="font-mono" title={log.performedBy}>
-                        {truncateId(log.performedBy)}
+                      <span title={log.performedBy}>
+                        {getUserDisplay(log, { idKeys: ['performedBy'], fallback: 'System' })}
                       </span>
                     </td>
                   </tr>

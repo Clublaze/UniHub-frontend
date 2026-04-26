@@ -33,7 +33,11 @@ export function useAdminUsers(filters = {}) {
     queryFn:  () => getAdminUsersApi({ limit: 20, ...filters }),
     select:   (res) => {
       const d = res.data.data
-      return { users: d?.users ?? [], total: d?.total ?? 0, totalPages: d?.totalPages ?? 1 }
+      const users = (d?.users ?? []).map((user) => ({
+        ...user,
+        id: user.id ?? user._id,
+      }))
+      return { users, total: d?.total ?? 0, totalPages: d?.totalPages ?? 1 }
     },
   })
 }
@@ -68,7 +72,12 @@ export function useLoginHistory(userId) {
   return useQuery({
     queryKey: ['admin', 'login-history', userId],
     queryFn:  () => getLoginHistoryApi(userId),
-    select:   (res) => res.data.data?.logs ?? [],
+    select:   (res) =>
+      (res.data.data?.logs ?? []).map((log) => ({
+        ...log,
+        id: log.id ?? log._id,
+        timestamp: log.timestamp ?? log.loginAt,
+      })),
     enabled:  !!userId,
     retry:    false,
   })
